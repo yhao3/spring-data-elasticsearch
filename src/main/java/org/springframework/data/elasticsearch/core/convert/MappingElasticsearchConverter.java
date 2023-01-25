@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2022 the original author or authors.
+ * Copyright 2013-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -349,7 +349,7 @@ public class MappingElasticsearchConverter
 					PersistentPropertyAccessor<R> propertyAccessor = new ConvertingPropertyAccessor<>(
 							targetEntity.getPropertyAccessor(result), conversionService);
 					// Only deal with String because ES generated Ids are strings !
-					if (idProperty != null && idProperty.isWritable() && idProperty.getType().isAssignableFrom(String.class)) {
+					if (idProperty != null && idProperty.isReadable() && idProperty.getType().isAssignableFrom(String.class)) {
 						propertyAccessor.setProperty(idProperty, document.getId());
 					}
 				}
@@ -411,7 +411,7 @@ public class MappingElasticsearchConverter
 
 			for (ElasticsearchPersistentProperty prop : entity) {
 
-				if (entity.isCreatorArgument(prop) || !prop.isReadable() || !prop.isWritable()) {
+				if (entity.isCreatorArgument(prop) || !prop.isReadable()) {
 					continue;
 				}
 

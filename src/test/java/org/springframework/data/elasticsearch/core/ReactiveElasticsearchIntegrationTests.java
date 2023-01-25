@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 the original author or authors.
+ * Copyright 2018-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,6 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.annotation.AccessType;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.ReadOnlyProperty;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -63,6 +62,7 @@ import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 import org.springframework.data.elasticsearch.annotations.Mapping;
 import org.springframework.data.elasticsearch.annotations.Setting;
+import org.springframework.data.elasticsearch.annotations.WriteOnlyProperty;
 import org.springframework.data.elasticsearch.client.erhlc.NativeSearchQuery;
 import org.springframework.data.elasticsearch.client.erhlc.NativeSearchQueryBuilder;
 import org.springframework.data.elasticsearch.client.erhlc.ReactiveElasticsearchTemplate;
@@ -1506,7 +1506,7 @@ public abstract class ReactiveElasticsearchIntegrationTests {
 		@Field(type = FieldType.Keyword) private String part2;
 
 		@Id
-		@ReadOnlyProperty
+		@WriteOnlyProperty
 		@AccessType(AccessType.Type.PROPERTY)
 		public String getId() {
 			return part1 + '-' + part2;

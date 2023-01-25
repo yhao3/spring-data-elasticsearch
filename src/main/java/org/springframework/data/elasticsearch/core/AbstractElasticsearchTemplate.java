@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2022 the original author or authors.
+ * Copyright 2019-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,6 +52,7 @@ import org.springframework.data.elasticsearch.core.query.UpdateQuery;
 import org.springframework.data.elasticsearch.core.query.UpdateResponse;
 import org.springframework.data.elasticsearch.core.routing.DefaultRoutingResolver;
 import org.springframework.data.elasticsearch.core.routing.RoutingResolver;
+import org.springframework.data.elasticsearch.core.script.Script;
 import org.springframework.data.elasticsearch.support.VersionInfo;
 import org.springframework.data.mapping.PersistentPropertyAccessor;
 import org.springframework.data.mapping.callback.EntityCallbacks;
@@ -407,7 +408,7 @@ public abstract class AbstractElasticsearchTemplate implements ElasticsearchOper
 			ElasticsearchPersistentProperty idProperty = persistentEntity.getIdProperty();
 
 			// Only deal with text because ES generated Ids are strings!
-			if (indexedObjectInformation.getId() != null && idProperty != null && idProperty.isWritable()
+			if (indexedObjectInformation.getId() != null && idProperty != null && idProperty.isReadable()
 					&& idProperty.getType().isAssignableFrom(String.class)) {
 				propertyAccessor.setProperty(idProperty, indexedObjectInformation.getId());
 			}
@@ -735,6 +736,29 @@ public abstract class AbstractElasticsearchTemplate implements ElasticsearchOper
 			}
 		}
 	}
+
+	// region script operations
+
+	@Override
+	public boolean putScript(Script script) {
+		throw new UnsupportedOperationException(
+				"putScript() operation not implemented by " + getClass().getCanonicalName());
+	}
+
+	@Nullable
+	@Override
+	public Script getScript(String name) {
+		throw new UnsupportedOperationException(
+				"getScript() operation not implemented by " + getClass().getCanonicalName());
+	}
+
+	@Override
+	public boolean deleteScript(String name) {
+		throw new UnsupportedOperationException(
+				"deleteScript() operation not implemented by " + getClass().getCanonicalName());
+	}
+
+	// endregion
 
 	// region Document callbacks
 	protected interface DocumentCallback<T> {

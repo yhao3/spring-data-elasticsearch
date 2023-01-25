@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 the original author or authors.
+ * Copyright 2021-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.data.elasticsearch.core.query.SeqNoPrimaryTerm;
 import org.springframework.data.elasticsearch.core.routing.DefaultRoutingResolver;
 import org.springframework.data.elasticsearch.core.routing.RoutingResolver;
+import org.springframework.data.elasticsearch.core.script.Script;
 import org.springframework.data.elasticsearch.core.suggest.response.Suggest;
 import org.springframework.data.elasticsearch.support.VersionInfo;
 import org.springframework.data.mapping.PersistentPropertyAccessor;
@@ -260,7 +261,7 @@ abstract public class AbstractReactiveElasticsearchTemplate
 			ElasticsearchPersistentProperty idProperty = persistentEntity.getIdProperty();
 
 			// Only deal with text because ES generated Ids are strings!
-			if (indexedObjectInformation.getId() != null && idProperty != null && idProperty.isWritable()
+			if (indexedObjectInformation.getId() != null && idProperty != null && idProperty.isReadable()
 					&& idProperty.getType().isAssignableFrom(String.class)) {
 				propertyAccessor.setProperty(idProperty, indexedObjectInformation.getId());
 			}
@@ -584,12 +585,14 @@ abstract public class AbstractReactiveElasticsearchTemplate
 
 	/**
 	 * Callback to convert a {@link SearchDocument} into different other classes
+	 *
 	 * @param <T> the entity type
 	 */
 	protected interface SearchDocumentCallback<T> {
 
 		/**
 		 * converts a {@link SearchDocument} to an entity
+		 *
 		 * @param searchDocument
 		 * @return the entity in a MOno
 		 */
@@ -597,6 +600,7 @@ abstract public class AbstractReactiveElasticsearchTemplate
 
 		/**
 		 * converts a {@link SearchDocument} into a SearchHit
+		 *
 		 * @param searchDocument
 		 * @return
 		 */
@@ -625,6 +629,26 @@ abstract public class AbstractReactiveElasticsearchTemplate
 		}
 	}
 
+	// endregion
+
+	// region script operations
+	@Override
+	public Mono<Boolean> putScript(Script script) {
+		throw new UnsupportedOperationException(
+				"putScript() operation not implemented by " + getClass().getCanonicalName());
+	}
+
+	@Override
+	public Mono<Script> getScript(String name) {
+		throw new UnsupportedOperationException(
+				"getScript() operation not implemented by " + getClass().getCanonicalName());
+	}
+
+	@Override
+	public Mono<Boolean> deleteScript(String name) {
+		throw new UnsupportedOperationException(
+				"deleteScript() operation not implemented by " + getClass().getCanonicalName());
+	}
 	// endregion
 
 	// region Helper methods
