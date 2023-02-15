@@ -69,6 +69,7 @@ import org.springframework.util.Assert;
  * Elasticsearch client.
  *
  * @author Peter-Josef Meisch
+ * @author Hamid Rahimi
  * @since 4.4
  */
 public class ElasticsearchTemplate extends AbstractElasticsearchTemplate {
@@ -217,8 +218,8 @@ public class ElasticsearchTemplate extends AbstractElasticsearchTemplate {
 		Object queryObject = query.getObject();
 
 		if (queryObject != null) {
-			query.setObject(updateIndexedObject(queryObject, IndexedObjectInformation.of(indexResponse.id(),
-					indexResponse.seqNo(), indexResponse.primaryTerm(), indexResponse.version())));
+			query.setObject(updateIndexedObject(queryObject, new IndexedObjectInformation(indexResponse.id(),
+					indexResponse.index(), indexResponse.seqNo(), indexResponse.primaryTerm(), indexResponse.version())));
 		}
 
 		return indexResponse.id();
@@ -465,6 +466,29 @@ public class ElasticsearchTemplate extends AbstractElasticsearchTemplate {
 		return doMultiSearch(multiSearchQueryParameters);
 	}
 
+	@Override
+	public List<SearchHits<?>> multiSearch(List<? extends Query> queries, List<Class<?>> classes,
+			List<IndexCoordinates> indexes) {
+
+		Assert.notNull(queries, "queries must not be null");
+		Assert.notNull(classes, "classes must not be null");
+		Assert.notNull(indexes, "indexes must not be null");
+		Assert.isTrue(queries.size() == classes.size() && queries.size() == indexes.size(),
+				"queries, classes and indexes must have the same size");
+
+		List<MultiSearchQueryParameter> multiSearchQueryParameters = new ArrayList<>(queries.size());
+		Iterator<Class<?>> it = classes.iterator();
+		Iterator<IndexCoordinates> indexesIt = indexes.iterator();
+
+		for (Query query : queries) {
+			Class<?> clazz = it.next();
+			IndexCoordinates index = indexesIt.next();
+			multiSearchQueryParameters.add(new MultiSearchQueryParameter(query, clazz, index));
+		}
+
+		return doMultiSearch(multiSearchQueryParameters);
+	}
+
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private List<SearchHits<?>> doMultiSearch(List<MultiSearchQueryParameter> multiSearchQueryParameters) {
 
@@ -628,8 +652,8 @@ public class ElasticsearchTemplate extends AbstractElasticsearchTemplate {
 					failedDocuments);
 		}
 
-		return bulkResponse.items().stream()
-				.map(item -> IndexedObjectInformation.of(item.id(), item.seqNo(), item.primaryTerm(), item.version()))
+		return bulkResponse.items().stream().map(
+				item -> new IndexedObjectInformation(item.id(), item.index(), item.seqNo(), item.primaryTerm(), item.version()))
 				.collect(Collectors.toList());
 
 	}

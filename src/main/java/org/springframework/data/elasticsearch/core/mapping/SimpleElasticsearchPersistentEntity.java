@@ -71,6 +71,7 @@ public class SimpleElasticsearchPersistentEntity<T> extends BasicPersistentEntit
 	private final Lazy<SettingsParameter> settingsParameter;
 	private @Nullable ElasticsearchPersistentProperty seqNoPrimaryTermProperty;
 	private @Nullable ElasticsearchPersistentProperty joinFieldProperty;
+	private @Nullable ElasticsearchPersistentProperty indexedIndexNameProperty;
 	private @Nullable Document.VersionType versionType;
 	private boolean createIndexAndMapping;
 	private final Dynamic dynamic;
@@ -81,6 +82,8 @@ public class SimpleElasticsearchPersistentEntity<T> extends BasicPersistentEntit
 
 	private final ConcurrentHashMap<String, Expression> indexNameExpressions = new ConcurrentHashMap<>();
 	private final Lazy<EvaluationContext> indexNameEvaluationContext = Lazy.of(this::getIndexNameEvaluationContext);
+
+	private final boolean storeIdInSource;
 
 	public SimpleElasticsearchPersistentEntity(TypeInformation<T> typeInformation,
 			ContextConfiguration contextConfiguration) {
@@ -104,8 +107,10 @@ public class SimpleElasticsearchPersistentEntity<T> extends BasicPersistentEntit
 			this.versionType = document.versionType();
 			this.createIndexAndMapping = document.createIndex();
 			this.dynamic = document.dynamic();
+			this.storeIdInSource = document.storeIdInSource();
 		} else {
 			this.dynamic = Dynamic.INHERIT;
+			this.storeIdInSource = true;
 		}
 		Routing routingAnnotation = AnnotatedElementUtils.findMergedAnnotation(clazz, Routing.class);
 
@@ -191,6 +196,11 @@ public class SimpleElasticsearchPersistentEntity<T> extends BasicPersistentEntit
 	}
 
 	@Override
+	public boolean storeIdInSource() {
+		return storeIdInSource;
+	}
+
+	@Override
 	public void addPersistentProperty(ElasticsearchPersistentProperty property) {
 		super.addPersistentProperty(property);
 
@@ -216,6 +226,20 @@ public class SimpleElasticsearchPersistentEntity<T> extends BasicPersistentEntit
 			if (hasSeqNoPrimaryTermProperty()) {
 				warnAboutBothSeqNoPrimaryTermAndVersionProperties();
 			}
+		}
+
+		if (property.isIndexedIndexNameProperty()) {
+
+			if (!property.getActualType().isAssignableFrom(String.class)) {
+				throw new MappingException(String.format("@IndexedIndexName annotation must be put on String property"));
+			}
+
+			if (indexedIndexNameProperty != null) {
+				throw new MappingException(
+						String.format("@IndexedIndexName annotation can only be put on one property in an entity"));
+			}
+
+			this.indexedIndexNameProperty = property;
 		}
 
 		Class<?> actualType = property.getActualTypeOrNull();
@@ -278,6 +302,12 @@ public class SimpleElasticsearchPersistentEntity<T> extends BasicPersistentEntit
 	@Override
 	public ElasticsearchPersistentProperty getJoinFieldProperty() {
 		return joinFieldProperty;
+	}
+
+	@Nullable
+	@Override
+	public ElasticsearchPersistentProperty getIndexedIndexNameProperty() {
+		return indexedIndexNameProperty;
 	}
 
 	// region SpEL handling

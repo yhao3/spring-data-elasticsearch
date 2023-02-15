@@ -134,6 +134,14 @@ public interface ElasticsearchPersistentEntity<T> extends PersistentEntity<T, El
 	}
 
 	/**
+	 * @return the property annotated with {@link org.springframework.data.elasticsearch.annotations.IndexedIndexName} if
+	 *         it exists, otherwise null
+	 * @since 5.1
+	 */
+	@Nullable
+	ElasticsearchPersistentProperty getIndexedIndexNameProperty();
+
+	/**
 	 * returns the default settings for an index.
 	 *
 	 * @return settings
@@ -167,4 +175,10 @@ public interface ElasticsearchPersistentEntity<T> extends PersistentEntity<T, El
 	 * @since 4.3
 	 */
 	Dynamic dynamic();
+
+	/**
+	 * @return the storeIdInSource value from the document annotation
+	 * @since 5.1
+	 */
+	boolean storeIdInSource();
 }

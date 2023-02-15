@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 the original author or authors.
+ * Copyright 2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,23 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.data.elasticsearch.core;
+package org.springframework.data.elasticsearch.core.query;
 
 import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
 
 /**
- * Value class capturing information about a newly indexed document in Elasticsearch.
+ * Record defining a docvalue_field to be used in a query.
  *
  * @author Peter-Josef Meisch
- * @author Roman Puchkovskiy
- * @since 4.1
+ * @since 5.1
  */
-public record IndexedObjectInformation( //
-		@Nullable String id, //
-		/** @since 5.1 */ //
-		@Nullable String index, //
-		@Nullable Long seqNo, //
-		@Nullable Long primaryTerm, //
-		@Nullable Long version //
-) {
+public record DocValueField(String field, @Nullable String format) {
+	public DocValueField {
+		Assert.notNull(field, "field must not be null");
+	}
+
+	public DocValueField(String field) {
+		this(field, null);
+	}
 }

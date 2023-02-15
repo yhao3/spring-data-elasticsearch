@@ -29,16 +29,7 @@ import java.lang.Double;
 import java.lang.Integer;
 import java.lang.Long;
 import java.lang.Object;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -58,16 +49,9 @@ import org.springframework.data.annotation.Version;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.*;
 import org.springframework.data.elasticsearch.annotations.Field;
-import org.springframework.data.elasticsearch.annotations.FieldType;
-import org.springframework.data.elasticsearch.annotations.InnerField;
-import org.springframework.data.elasticsearch.annotations.JoinTypeRelation;
-import org.springframework.data.elasticsearch.annotations.JoinTypeRelations;
-import org.springframework.data.elasticsearch.annotations.MultiField;
 import org.springframework.data.elasticsearch.annotations.ScriptedField;
-import org.springframework.data.elasticsearch.annotations.Setting;
-import org.springframework.data.elasticsearch.annotations.WriteOnlyProperty;
 import org.springframework.data.elasticsearch.client.erhlc.NativeSearchQueryBuilder;
 import org.springframework.data.elasticsearch.core.document.Explanation;
 import org.springframework.data.elasticsearch.core.geo.GeoPoint;
@@ -78,6 +62,7 @@ import org.springframework.data.elasticsearch.core.index.Settings;
 import org.springframework.data.elasticsearch.core.join.JoinField;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.*;
+import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.data.elasticsearch.core.query.highlight.Highlight;
 import org.springframework.data.elasticsearch.core.query.highlight.HighlightField;
 import org.springframework.data.elasticsearch.junit.jupiter.SpringIntegrationTest;
@@ -114,6 +99,7 @@ import org.springframework.lang.Nullable;
  * @author Sijia Liu
  * @author Haibo Liu
  * @author scoobyzhang
+ * @author Hamid Rahimi
  */
 @SpringIntegrationTest
 public abstract class ElasticsearchIntegrationTests {
@@ -137,6 +123,7 @@ public abstract class ElasticsearchIntegrationTests {
 		indexNameProvider.increment();
 		indexOperations = operations.indexOps(SampleEntity.class);
 		indexOperations.createWithMapping();
+		operations.indexOps(IndexedIndexNameEntity.class).createWithMapping();
 	}
 
 	@Test
@@ -1756,6 +1743,39 @@ public abstract class ElasticsearchIntegrationTests {
 		List<SearchHits<?>> searchHitsList = operations.multiSearch(queries,
 				Lists.newArrayList(SampleEntity.class, Book.class),
 				IndexCoordinates.of(indexNameProvider.indexName(), bookIndex.getIndexName()));
+
+		bookIndexOperations.delete();
+
+		SearchHits<?> searchHits0 = searchHitsList.get(0);
+		assertThat(searchHits0.getTotalHits()).isEqualTo(1L);
+		SearchHit<SampleEntity> searchHit0 = (SearchHit<SampleEntity>) searchHits0.getSearchHit(0);
+		assertThat(searchHit0.getContent().getClass()).isEqualTo(SampleEntity.class);
+		SearchHits<?> searchHits1 = searchHitsList.get(1);
+		assertThat(searchHits1.getTotalHits()).isEqualTo(1L);
+		SearchHit<Book> searchHit1 = (SearchHit<Book>) searchHits1.getSearchHit(0);
+		assertThat(searchHit1.getContent().getClass()).isEqualTo(Book.class);
+	}
+
+	@Test // #2434
+	public void shouldReturnDifferentEntityForMultiSearchWithMultipleIndexCoordinates() {
+
+		IndexOperations bookIndexOperations = operations.indexOps(Book.class);
+		bookIndexOperations.delete();
+		bookIndexOperations.createWithMapping();
+		bookIndexOperations.refresh();
+		IndexCoordinates bookIndex = IndexCoordinates.of("i-need-my-own-index");
+		operations.index(buildIndex(SampleEntity.builder().id("1").message("ab").build()),
+				IndexCoordinates.of(indexNameProvider.indexName()));
+		operations.index(buildIndex(Book.builder().id("2").description("bc").build()), bookIndex);
+		bookIndexOperations.refresh();
+
+		List<Query> queries = new ArrayList<>();
+		queries.add(getTermQuery("message", "ab"));
+		queries.add(getTermQuery("description", "bc"));
+
+		List<SearchHits<?>> searchHitsList = operations.multiSearch(queries,
+				Lists.newArrayList(SampleEntity.class, Book.class),
+				List.of(IndexCoordinates.of(indexNameProvider.indexName()), IndexCoordinates.of(bookIndex.getIndexName())));
 
 		bookIndexOperations.delete();
 
@@ -3573,6 +3593,18 @@ public abstract class ElasticsearchIntegrationTests {
 		operations.index(query, IndexCoordinates.of(indexNameProvider.indexName()));
 	}
 
+	@Test // #2112
+	@DisplayName("should set IndexedIndexName property")
+	void shouldSetIndexedIndexNameProperty() {
+
+		var entity = new IndexedIndexNameEntity();
+		entity.setId("42");
+		entity.setSomeText("someText");
+		var saved = operations.save(entity);
+
+		assertThat(saved.getIndexedIndexName()).isEqualTo(indexNameProvider.indexName() + "-indexedindexname");
+	}
+
 	@Test // #1945
 	@DisplayName("should error on sort with unmapped field and default settings")
 	void shouldErrorOnSortWithUnmappedFieldAndDefaultSettings() {
@@ -4661,6 +4693,43 @@ public abstract class ElasticsearchIntegrationTests {
 			result = 31 * result + (firstName != null ? firstName.hashCode() : 0);
 			result = 31 * result + (lastName != null ? lastName.hashCode() : 0);
 			return result;
+		}
+	}
+
+	@Document(indexName = "#{@indexNameProvider.indexName()}-indexedindexname")
+	private static class IndexedIndexNameEntity {
+		@Nullable
+		@Id private String id;
+		@Nullable
+		@Field(type = Text) private String someText;
+		@Nullable
+		@IndexedIndexName private String indexedIndexName;
+
+		@Nullable
+		public String getId() {
+			return id;
+		}
+
+		public void setId(@Nullable String id) {
+			this.id = id;
+		}
+
+		@Nullable
+		public String getSomeText() {
+			return someText;
+		}
+
+		public void setSomeText(@Nullable String someText) {
+			this.someText = someText;
+		}
+
+		@Nullable
+		public String getIndexedIndexName() {
+			return indexedIndexName;
+		}
+
+		public void setIndexedIndexName(@Nullable String indexedIndexName) {
+			this.indexedIndexName = indexedIndexName;
 		}
 	}
 	// endregion
